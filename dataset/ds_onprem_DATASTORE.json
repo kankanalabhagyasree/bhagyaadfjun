@@ -1,0 +1,25 @@
+{
+	"name": "ds_onprem_DATASTORE",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_onprem_SQL_DATASTORE",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"p_table_name": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "dbo",
+			"table": {
+				"value": "@dataset().p_table_name",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

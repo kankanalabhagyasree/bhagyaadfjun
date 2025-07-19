@@ -1,0 +1,88 @@
+{
+	"name": "pl_jobstatus_Exe_Pipelineactivity",
+	"properties": {
+		"activities": [
+			{
+				"name": "Look_where_my_job_under_status",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT job_status FROM config\nWHERE job_id=1",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "ds_azSQL_TARGET",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_table_name": "config"
+						}
+					}
+				}
+			},
+			{
+				"name": "If Condition1",
+				"type": "IfCondition",
+				"dependsOn": [
+					{
+						"activity": "Look_where_my_job_under_status",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"expression": {
+						"value": "@equals(\r\n    activity('Look_where_my_job_under_status').output.firstRow.job_status,\r\n        'Idle'\r\n    )",
+						"type": "Expression"
+					},
+					"ifFalseActivities": [
+						{
+							"name": "Fail_to_job_not_Idle",
+							"description": "Its not a actual failure we making it failure with this fai activity taking under false in if cond,it means job_status is under inprogress",
+							"type": "Fail",
+							"dependsOn": [],
+							"userProperties": [],
+							"typeProperties": {
+								"message": "the previous iteration is in progress",
+								"errorCode": "1001"
+							}
+						}
+					],
+					"ifTrueActivities": [
+						{
+							"name": "Execute Pipeline1 under horlyrefresh pipeline",
+							"type": "ExecutePipeline",
+							"dependsOn": [],
+							"policy": {
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"pipeline": {
+									"referenceName": "pl_failactivity_intentionally-Hourlyrefresh",
+									"type": "PipelineReference"
+								},
+								"waitOnCompletion": true
+							}
+						}
+					]
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-07-15T17:08:15Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

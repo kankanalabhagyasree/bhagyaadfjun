@@ -1,0 +1,109 @@
+{
+	"name": "pl_delete_file_once_it_processed",
+	"properties": {
+		"activities": [
+			{
+				"name": "READ_File_Process_copy_Data",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "ds_datafiles_input_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_file_name": "employee.csv"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "ds_datafiles_output_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_file_name": "employee.csv"
+						}
+					}
+				]
+			},
+			{
+				"name": "Delete_File_in_Input_After_Processed_into_Output",
+				"type": "Delete",
+				"dependsOn": [
+					{
+						"activity": "READ_File_Process_copy_Data",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataset": {
+						"referenceName": "ds_datafiles_input_file",
+						"type": "DatasetReference",
+						"parameters": {
+							"p_file_name": "employee.csv"
+						}
+					},
+					"enableLogging": false,
+					"storeSettings": {
+						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
+						"enablePartitionDiscovery": false
+					}
+				}
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2025-07-14T09:16:58Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

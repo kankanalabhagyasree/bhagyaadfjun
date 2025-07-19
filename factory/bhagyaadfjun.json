@@ -1,0 +1,9 @@
+{
+	"name": "bhagyaadfjun",
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "4dd9146d-6467-42cc-8062-0c51c4f66596",
+		"tenantId": "8e7c4845-6413-45ec-a443-c418e9453613"
+	}
+}
