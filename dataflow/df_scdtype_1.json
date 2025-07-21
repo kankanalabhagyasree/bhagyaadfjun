@@ -1,0 +1,156 @@
+{
+	"name": "df_scdtype_1",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ls_azSQL_SOURCE",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcStudent"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_azSQL_TARGET",
+						"type": "LinkedServiceReference"
+					},
+					"name": "trgStudent"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_azSQL_TARGET",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink1"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_azSQL_TARGET",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sink2"
+				}
+			],
+			"transformations": [
+				{
+					"name": "srcSelect"
+				},
+				{
+					"name": "tarSelect"
+				},
+				{
+					"name": "lookup1"
+				},
+				{
+					"name": "split1"
+				},
+				{
+					"name": "select1"
+				},
+				{
+					"name": "select2"
+				},
+				{
+					"name": "alterRow1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          student_id as integer,",
+				"          student_name as string,",
+				"          student_college as string,",
+				"          student_fee as decimal(19,4)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'query',",
+				"     store: 'sqlserver',",
+				"     query: '\\nSELECT * FROM student',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> srcStudent",
+				"source(output(",
+				"          student_id as integer,",
+				"          student_name as string,",
+				"          student_college as string,",
+				"          student_fee as decimal(19,4)",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'query',",
+				"     store: 'sqlserver',",
+				"     query: '\\nSELECT * FROM student_scd_type_1',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> trgStudent",
+				"srcStudent select(mapColumn(",
+				"          src_student_id = student_id,",
+				"          src_student_name = student_name,",
+				"          src_student_college = student_college,",
+				"          src_student_fee = student_fee",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> srcSelect",
+				"trgStudent select(mapColumn(",
+				"          trg_student_id = student_id,",
+				"          trg_student_name = student_name,",
+				"          trg_student_college = student_college,",
+				"          trg_student_fee = student_fee",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> tarSelect",
+				"srcSelect, tarSelect lookup(src_student_id == trg_student_id,",
+				"     multiple: false,",
+				"     pickup: 'any',",
+				"     broadcast: 'auto')~> lookup1",
+				"lookup1 split(isNull(trg_student_id),",
+				"     !isNull(trg_student_id)&&(src_student_name!=trg_student_name||src_student_college!=trg_student_college||src_student_fee!=trg_student_fee),",
+				"     disjoint: false) ~> split1@(NewRecords, UpdatedRecords)",
+				"split1@NewRecords select(mapColumn(",
+				"          student_id = src_student_id,",
+				"          student_name = src_student_name,",
+				"          student_college = src_student_college,",
+				"          student_fee = src_student_fee",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select1",
+				"split1@UpdatedRecords select(mapColumn(",
+				"          student_id = src_student_id,",
+				"          student_name = src_student_name,",
+				"          student_college = src_student_college,",
+				"          student_fee = src_student_fee",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select2",
+				"select2 alterRow(updateIf(1==1)) ~> alterRow1",
+				"select1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'student_scd_type_1',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1",
+				"alterRow1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'student_scd_type_1',",
+				"     insertable: false,",
+				"     updateable: true,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     keys:['student_id'],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink2"
+			]
+		}
+	}
+}
