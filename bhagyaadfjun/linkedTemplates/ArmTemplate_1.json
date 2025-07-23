@@ -643,6 +643,151 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/df_scdtype_2')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "ls_azSQL_SOURCE",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcstudent"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_azSQL_TARGET",
+								"type": "LinkedServiceReference"
+							},
+							"name": "trgstudent"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "ls_azSQL_TARGET",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "srcselect"
+						},
+						{
+							"name": "trgselect"
+						},
+						{
+							"name": "lookup1"
+						},
+						{
+							"name": "split1"
+						},
+						{
+							"name": "select1"
+						},
+						{
+							"name": "select2"
+						},
+						{
+							"name": "union1"
+						},
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          student_id as integer,",
+						"          student_name as string,",
+						"          student_college as string,",
+						"          student_fee as decimal(19,4)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'query',",
+						"     store: 'sqlserver',",
+						"     query: 'SELECT * FROM student',",
+						"     isolationLevel: 'READ_UNCOMMITTED') ~> srcstudent",
+						"source(output(",
+						"          stud_key as integer,",
+						"          student_id as integer,",
+						"          student_name as string,",
+						"          student_college as string,",
+						"          student_fee as decimal(19,4)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'query',",
+						"     store: 'sqlserver',",
+						"     query: 'SELECT stud_key,\\nstudent_id,\\nstudent_name,\\nstudent_college,\\nstudent_fee \\nFROM student_scdtype_2\\nWHERE is_active=\\'yes\\'',",
+						"     isolationLevel: 'READ_UNCOMMITTED') ~> trgstudent",
+						"srcstudent select(mapColumn(",
+						"          src_student_id = student_id,",
+						"          src_student_name = student_name,",
+						"          src_student_college = student_college,",
+						"          src_student_fee = student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> srcselect",
+						"trgstudent select(mapColumn(",
+						"          trg_stud_key = stud_key,",
+						"          trg_student_id = student_id,",
+						"          trg_student_name = student_name,",
+						"          trg_student_college = student_college,",
+						"          trg_student_fee = student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> trgselect",
+						"srcselect, trgselect lookup(src_student_id == trg_student_id,",
+						"     multiple: false,",
+						"     pickup: 'any',",
+						"     broadcast: 'auto')~> lookup1",
+						"lookup1 split(isNull(trg_stud_key),",
+						"     !isNull(trg_stud_key)&&(src_student_name!=trg_student_name || src_student_college!=trg_student_college || src_student_fee!=trg_student_fee),",
+						"     disjoint: false) ~> split1@(NewRecords, UpdatedRecords)",
+						"split1@NewRecords select(mapColumn(",
+						"          student_id = src_student_id,",
+						"          student_name = src_student_name,",
+						"          student_college = src_student_college,",
+						"          student_fee = src_student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"split1@UpdatedRecords select(mapColumn(",
+						"          student_id = src_student_id,",
+						"          student_name = src_student_name,",
+						"          student_college = src_student_college,",
+						"          student_fee = src_student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select2",
+						"select1, select2 union(byName: true)~> union1",
+						"union1 derive(is_active = \"yes\",",
+						"          start_date = currentUTC()) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'student_scdtype_2',",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/pl_Aggregate')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
@@ -2132,148 +2277,6 @@
 				},
 				"annotations": [],
 				"lastPublishTime": "2025-07-14T09:16:58Z"
-			},
-			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/pl_create_hirarchy_folder_for_files_Y_M_D_File')]",
-			"type": "Microsoft.DataFactory/factories/pipelines",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"activities": [
-					{
-						"name": "Get_ListOfItems_From_Input",
-						"type": "GetMetadata",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataset": {
-								"referenceName": "ds_datafiles_input",
-								"type": "DatasetReference",
-								"parameters": {}
-							},
-							"fieldList": [
-								"childItems"
-							],
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"recursive": true,
-								"enablePartitionDiscovery": false
-							},
-							"formatSettings": {
-								"type": "DelimitedTextReadSettings"
-							}
-						}
-					},
-					{
-						"name": "ForEach1",
-						"type": "ForEach",
-						"dependsOn": [
-							{
-								"activity": "Get_ListOfItems_From_Input",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"userProperties": [],
-						"typeProperties": {
-							"items": {
-								"value": "@activity('Get_ListOfItems_From_Input').output.childItems",
-								"type": "Expression"
-							},
-							"isSequential": true,
-							"activities": [
-								{
-									"name": "Copy data files read and load",
-									"type": "Copy",
-									"dependsOn": [],
-									"policy": {
-										"timeout": "0.12:00:00",
-										"retry": 0,
-										"retryIntervalInSeconds": 30,
-										"secureOutput": false,
-										"secureInput": false
-									},
-									"userProperties": [],
-									"typeProperties": {
-										"source": {
-											"type": "DelimitedTextSource",
-											"storeSettings": {
-												"type": "AzureBlobFSReadSettings",
-												"recursive": true,
-												"enablePartitionDiscovery": false
-											},
-											"formatSettings": {
-												"type": "DelimitedTextReadSettings"
-											}
-										},
-										"sink": {
-											"type": "DelimitedTextSink",
-											"storeSettings": {
-												"type": "AzureBlobFSWriteSettings"
-											},
-											"formatSettings": {
-												"type": "DelimitedTextWriteSettings",
-												"quoteAllText": true,
-												"fileExtension": ".txt"
-											}
-										},
-										"enableStaging": false,
-										"translator": {
-											"type": "TabularTranslator",
-											"typeConversion": true,
-											"typeConversionSettings": {
-												"allowDataTruncation": true,
-												"treatBooleanAsNumber": false
-											}
-										}
-									},
-									"inputs": [
-										{
-											"referenceName": "ds_datafiles_input_file",
-											"type": "DatasetReference",
-											"parameters": {
-												"p_file_name": {
-													"value": "@item().name",
-													"type": "Expression"
-												}
-											}
-										}
-									],
-									"outputs": [
-										{
-											"referenceName": "ds_datafiles_folder_file",
-											"type": "DatasetReference",
-											"parameters": {
-												"p_folder": {
-													"value": "YEAR=@{formatDateTime(utcNow(),'yyyy')}/MONTH=@{formatDateTime(utcNow(),'MM')}/DAY=@{formatDateTime(utcNow(),'dd')}",
-													"type": "Expression"
-												},
-												"p_file": {
-													"value": "@item().name",
-													"type": "Expression"
-												}
-											}
-										}
-									]
-								}
-							]
-						}
-					}
-				],
-				"policy": {
-					"elapsedTimeMetric": {}
-				},
-				"annotations": [],
-				"lastPublishTime": "2025-07-14T10:39:29Z"
 			},
 			"dependsOn": []
 		}
