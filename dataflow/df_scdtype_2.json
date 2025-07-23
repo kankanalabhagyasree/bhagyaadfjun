@@ -45,13 +45,16 @@
 					"name": "select1"
 				},
 				{
-					"name": "select2"
-				},
-				{
 					"name": "union1"
 				},
 				{
 					"name": "derivedColumn1"
+				},
+				{
+					"name": "select4"
+				},
+				{
+					"name": "select5"
 				}
 			],
 			"scriptLines": [
@@ -112,17 +115,27 @@
 				"     ),",
 				"     skipDuplicateMapInputs: true,",
 				"     skipDuplicateMapOutputs: true) ~> select1",
-				"split1@UpdatedRecords select(mapColumn(",
-				"          student_id = src_student_id,",
-				"          student_name = src_student_name,",
-				"          student_college = src_student_college,",
-				"          student_fee = src_student_fee",
-				"     ),",
-				"     skipDuplicateMapInputs: true,",
-				"     skipDuplicateMapOutputs: true) ~> select2",
-				"select1, select2 union(byName: true)~> union1",
+				"select1, split1@UpdatedRecords union(byName: true)~> union1",
 				"union1 derive(is_active = \"yes\",",
 				"          start_date = currentUTC()) ~> derivedColumn1",
+				"split1@UpdatedRecords select(mapColumn(",
+				"          stud_key = trg_stud_key",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select4",
+				"split1@UpdatedRecords select(mapColumn(",
+				"          src_student_id,",
+				"          src_student_name,",
+				"          src_student_college,",
+				"          src_student_fee,",
+				"          trg_stud_key,",
+				"          trg_student_id,",
+				"          trg_student_name,",
+				"          trg_student_college,",
+				"          trg_student_fee",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> select5",
 				"derivedColumn1 sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'table',",
