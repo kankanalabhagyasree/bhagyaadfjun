@@ -6,10 +6,6 @@
 			"type": "string",
 			"metadata": "Data Factory name",
 			"defaultValue": "bhagyaadfjun"
-		},
-		"batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no": {
-			"type": "string",
-			"defaultValue": "1"
 		}
 	},
 	"variables": {
@@ -1282,46 +1278,6 @@
 				"lastPublishTime": "2025-07-16T00:44:43Z"
 			},
 			"dependsOn": []
-		},
-		{
-			"name": "[concat(parameters('factoryName'), '/batch_processing_1')]",
-			"type": "Microsoft.DataFactory/factories/triggers",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"runtimeState": "Stopped",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "pl_incremental_loading_for_multiple_loading_scheduling",
-							"type": "PipelineReference"
-						},
-						"parameters": {
-							"p_batch_no": "[parameters('batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no')]"
-						}
-					}
-				],
-				"type": "ScheduleTrigger",
-				"typeProperties": {
-					"recurrence": {
-						"frequency": "Day",
-						"interval": 1,
-						"startTime": "2025-07-13T08:39:00",
-						"timeZone": "India Standard Time",
-						"schedule": {
-							"minutes": [
-								25
-							],
-							"hours": [
-								14
-							]
-						}
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl_incremental_loading_for_multiple_loading_scheduling')]"
-			]
 		}
 	]
 }

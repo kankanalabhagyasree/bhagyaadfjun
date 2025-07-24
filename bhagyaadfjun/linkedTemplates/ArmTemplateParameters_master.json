@@ -47,9 +47,6 @@
 		"ls_onprem_SQL_DATASTORE_properties_typeProperties_userName": {
 			"value": "sa"
 		},
-		"batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no": {
-			"value": "1"
-		},
 		"containerUri": {
 			"value": ""
 		},

@@ -63,10 +63,6 @@
 			"type": "string",
 			"defaultValue": "sa"
 		},
-		"batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no": {
-			"type": "string",
-			"defaultValue": "1"
-		},
 		"containerUri": {
 			"type": "string",
 			"metadata": "URI to storage account containing linked ARM templates"
@@ -193,9 +189,6 @@
 				"parameters": {
 					"factoryName": {
 						"value": "[parameters('factoryName')]"
-					},
-					"batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no": {
-						"value": "[parameters('batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no')]"
 					}
 				}
 			},

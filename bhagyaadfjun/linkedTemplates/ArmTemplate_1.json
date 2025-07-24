@@ -672,6 +672,13 @@
 								"type": "LinkedServiceReference"
 							},
 							"name": "sink1"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_azSQL_TARGET",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sink2"
 						}
 					],
 					"transformations": [
@@ -691,13 +698,22 @@
 							"name": "select1"
 						},
 						{
-							"name": "select2"
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "select4"
+						},
+						{
+							"name": "select5"
 						},
 						{
 							"name": "union1"
 						},
 						{
-							"name": "derivedColumn1"
+							"name": "derivedColumn2"
+						},
+						{
+							"name": "alterRow1"
 						}
 					],
 					"scriptLines": [
@@ -758,6 +774,13 @@
 						"     ),",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true) ~> select1",
+						"union1 derive(is_active = \"yes\",",
+						"          start_date = currentUTC()) ~> derivedColumn1",
+						"split1@UpdatedRecords select(mapColumn(",
+						"          stud_key = trg_stud_key",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select4",
 						"split1@UpdatedRecords select(mapColumn(",
 						"          student_id = src_student_id,",
 						"          student_name = src_student_name,",
@@ -765,10 +788,11 @@
 						"          student_fee = src_student_fee",
 						"     ),",
 						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true) ~> select2",
-						"select1, select2 union(byName: true)~> union1",
-						"union1 derive(is_active = \"yes\",",
-						"          start_date = currentUTC()) ~> derivedColumn1",
+						"     skipDuplicateMapOutputs: true) ~> select5",
+						"select1, select5 union(byName: true)~> union1",
+						"select4 derive(is_active = \"No\",",
+						"          end_date = currentUTC()) ~> derivedColumn2",
+						"derivedColumn2 alterRow(updateIf(1==1)) ~> alterRow1",
 						"derivedColumn1 sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     format: 'table',",
@@ -781,7 +805,21 @@
 						"     upsertable: false,",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
-						"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'student_scdtype_2',",
+						"     insertable: true,",
+						"     updateable: true,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     keys:['stud_key'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink2"
 					]
 				}
 			},

@@ -62,10 +62,6 @@
 		"ls_onprem_SQL_DATASTORE_properties_typeProperties_userName": {
 			"type": "string",
 			"defaultValue": "sa"
-		},
-		"batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no": {
-			"type": "string",
-			"defaultValue": "1"
 		}
 	},
 	"variables": {
@@ -4237,7 +4233,8 @@
 								"datasetParameters": {
 									"srcstudent": {},
 									"trgstudent": {},
-									"sink1": {}
+									"sink1": {},
+									"sink2": {}
 								}
 							},
 							"staging": {},
@@ -5313,46 +5310,6 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/batch_processing_1')]",
-			"type": "Microsoft.DataFactory/factories/triggers",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"runtimeState": "Stopped",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "pl_incremental_loading_for_multiple_loading_scheduling",
-							"type": "PipelineReference"
-						},
-						"parameters": {
-							"p_batch_no": "[parameters('batch_processing_1_properties_pl_incremental_loading_for_multiple_loading_scheduling_parameters_p_batch_no')]"
-						}
-					}
-				],
-				"type": "ScheduleTrigger",
-				"typeProperties": {
-					"recurrence": {
-						"frequency": "Day",
-						"interval": 1,
-						"startTime": "2025-07-13T08:39:00",
-						"timeZone": "India Standard Time",
-						"schedule": {
-							"minutes": [
-								25
-							],
-							"hours": [
-								14
-							]
-						}
-					}
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/pl_incremental_loading_for_multiple_loading_scheduling')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/SelfHostedIR')]",
 			"type": "Microsoft.DataFactory/factories/integrationRuntimes",
 			"apiVersion": "2018-06-01",
@@ -6318,6 +6275,13 @@
 								"type": "LinkedServiceReference"
 							},
 							"name": "sink1"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_azSQL_TARGET",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sink2"
 						}
 					],
 					"transformations": [
@@ -6337,13 +6301,22 @@
 							"name": "select1"
 						},
 						{
-							"name": "select2"
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "select4"
+						},
+						{
+							"name": "select5"
 						},
 						{
 							"name": "union1"
 						},
 						{
-							"name": "derivedColumn1"
+							"name": "derivedColumn2"
+						},
+						{
+							"name": "alterRow1"
 						}
 					],
 					"scriptLines": [
@@ -6404,6 +6377,13 @@
 						"     ),",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true) ~> select1",
+						"union1 derive(is_active = \"yes\",",
+						"          start_date = currentUTC()) ~> derivedColumn1",
+						"split1@UpdatedRecords select(mapColumn(",
+						"          stud_key = trg_stud_key",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select4",
 						"split1@UpdatedRecords select(mapColumn(",
 						"          student_id = src_student_id,",
 						"          student_name = src_student_name,",
@@ -6411,10 +6391,11 @@
 						"          student_fee = src_student_fee",
 						"     ),",
 						"     skipDuplicateMapInputs: true,",
-						"     skipDuplicateMapOutputs: true) ~> select2",
-						"select1, select2 union(byName: true)~> union1",
-						"union1 derive(is_active = \"yes\",",
-						"          start_date = currentUTC()) ~> derivedColumn1",
+						"     skipDuplicateMapOutputs: true) ~> select5",
+						"select1, select5 union(byName: true)~> union1",
+						"select4 derive(is_active = \"No\",",
+						"          end_date = currentUTC()) ~> derivedColumn2",
+						"derivedColumn2 alterRow(updateIf(1==1)) ~> alterRow1",
 						"derivedColumn1 sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     format: 'table',",
@@ -6427,7 +6408,21 @@
 						"     upsertable: false,",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
-						"     errorHandlingOption: 'stopOnFirstError') ~> sink1"
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'student_scdtype_2',",
+						"     insertable: true,",
+						"     updateable: true,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     keys:['stud_key'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink2"
 					]
 				}
 			},

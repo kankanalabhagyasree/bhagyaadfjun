@@ -1064,7 +1064,8 @@
 								"datasetParameters": {
 									"srcstudent": {},
 									"trgstudent": {},
-									"sink1": {}
+									"sink1": {},
+									"sink2": {}
 								}
 							},
 							"staging": {},
