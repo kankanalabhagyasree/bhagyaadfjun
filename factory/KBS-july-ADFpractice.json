@@ -1,0 +1,9 @@
+{
+	"name": "KBS-july-ADFpractice",
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "00956273-3253-4470-992d-4551eb5ca436",
+		"tenantId": "d9de2ae9-1ee9-407a-bbbf-756d9dedc5a5"
+	}
+}
