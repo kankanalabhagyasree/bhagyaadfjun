@@ -1,0 +1,241 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name"
+		},
+		"ls_azSQL_SOURCE": {
+			"type": "string"
+		},
+		"ls_azSQL_TARGET": {
+			"type": "string"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_scdtype_2')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_scdtype_2",
+								"type": "DataFlowReference"
+							},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/df_scdtype_2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_scdtype_2')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "[parameters('ls_azSQL_SOURCE')]",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcstudent"
+						},
+						{
+							"linkedService": {
+								"referenceName": "[parameters('ls_azSQL_TARGET')]",
+								"type": "LinkedServiceReference"
+							},
+							"name": "trgstudent"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "[parameters('ls_azSQL_TARGET')]",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sink1"
+						},
+						{
+							"linkedService": {
+								"referenceName": "[parameters('ls_azSQL_TARGET')]",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sink2"
+						}
+					],
+					"transformations": [
+						{
+							"name": "srcselect"
+						},
+						{
+							"name": "trgselect"
+						},
+						{
+							"name": "lookup1"
+						},
+						{
+							"name": "split1"
+						},
+						{
+							"name": "select1"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "select4"
+						},
+						{
+							"name": "select5"
+						},
+						{
+							"name": "union1"
+						},
+						{
+							"name": "derivedColumn2"
+						},
+						{
+							"name": "alterRow1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          student_id as integer,",
+						"          student_name as string,",
+						"          student_college as string,",
+						"          student_fee as decimal(19,4)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'query',",
+						"     store: 'sqlserver',",
+						"     query: 'SELECT * FROM student',",
+						"     isolationLevel: 'READ_UNCOMMITTED') ~> srcstudent",
+						"source(output(",
+						"          stud_key as integer,",
+						"          student_id as integer,",
+						"          student_name as string,",
+						"          student_college as string,",
+						"          student_fee as decimal(19,4)",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'query',",
+						"     store: 'sqlserver',",
+						"     query: 'SELECT stud_key,\\nstudent_id,\\nstudent_name,\\nstudent_college,\\nstudent_fee \\nFROM student_scdtype_2\\nWHERE is_active=\\'yes\\'',",
+						"     isolationLevel: 'READ_UNCOMMITTED') ~> trgstudent",
+						"srcstudent select(mapColumn(",
+						"          src_student_id = student_id,",
+						"          src_student_name = student_name,",
+						"          src_student_college = student_college,",
+						"          src_student_fee = student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> srcselect",
+						"trgstudent select(mapColumn(",
+						"          trg_stud_key = stud_key,",
+						"          trg_student_id = student_id,",
+						"          trg_student_name = student_name,",
+						"          trg_student_college = student_college,",
+						"          trg_student_fee = student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> trgselect",
+						"srcselect, trgselect lookup(src_student_id == trg_student_id,",
+						"     multiple: false,",
+						"     pickup: 'any',",
+						"     broadcast: 'auto')~> lookup1",
+						"lookup1 split(isNull(trg_stud_key),",
+						"     !isNull(trg_stud_key)&&(src_student_name!=trg_student_name || src_student_college!=trg_student_college || src_student_fee!=trg_student_fee),",
+						"     disjoint: false) ~> split1@(NewRecords, UpdatedRecords)",
+						"split1@NewRecords select(mapColumn(",
+						"          student_id = src_student_id,",
+						"          student_name = src_student_name,",
+						"          student_college = src_student_college,",
+						"          student_fee = src_student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select1",
+						"union1 derive(is_active = \"yes\",",
+						"          start_date = currentUTC()) ~> derivedColumn1",
+						"split1@UpdatedRecords select(mapColumn(",
+						"          stud_key = trg_stud_key",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select4",
+						"split1@UpdatedRecords select(mapColumn(",
+						"          student_id = src_student_id,",
+						"          student_name = src_student_name,",
+						"          student_college = src_student_college,",
+						"          student_fee = src_student_fee",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> select5",
+						"select1, select5 union(byName: true)~> union1",
+						"select4 derive(is_active = \"No\",",
+						"          end_date = currentUTC()) ~> derivedColumn2",
+						"derivedColumn2 alterRow(updateIf(1==1)) ~> alterRow1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'student_scdtype_2',",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink1",
+						"alterRow1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'student_scdtype_2',",
+						"     insertable: true,",
+						"     updateable: true,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     keys:['stud_key'],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sink2"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
