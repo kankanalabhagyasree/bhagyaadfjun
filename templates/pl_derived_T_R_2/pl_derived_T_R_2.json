@@ -1,0 +1,149 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"factoryName": {
+			"type": "string",
+			"metadata": "Data Factory name"
+		},
+		"ls_kotasadlsgen2storage1": {
+			"type": "string"
+		}
+	},
+	"variables": {
+		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/pl_derived_T_R_2')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_derived_T_R_2",
+								"type": "DataFlowReference"
+							},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"annotations": [],
+				"lastPublishTime": "2025-07-17T07:47:03Z"
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/df_derived_T_R_2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_derived_T_R_2')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "[parameters('ls_kotasadlsgen2storage1')]",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcEmployee"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "[parameters('ls_kotasadlsgen2storage1')]",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sink1"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedColumn1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          EmployeeNo as short,",
+						"          Ename as string,",
+						"          Job as string,",
+						"          Mgr as string,",
+						"          Hiredate as date,",
+						"          Salary as double,",
+						"          Commission as string,",
+						"          DepartmentNo as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     fileSystem: 'datafiles',",
+						"     folderPath: 'input',",
+						"     fileName: 'employee.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcEmployee",
+						"srcEmployee derive(Year = year(Hiredate),",
+						"          Semester = iif(month(Hiredate)<=6,\"H1\",\"H2\"),",
+						"          Quarter = case(\r",
+						"    month(Hiredate)<=3,\"Q1\",\r",
+						"    month(Hiredate)>3 &&month(Hiredate)<=6,\"Q2\",\r",
+						"     month(Hiredate)>6 &&month(Hiredate)<=9,\"Q3\",\r",
+						"     \"Q4\"\r",
+						"),",
+						"          Month = case(\r",
+						"    month(Hiredate)==1,\"Jan\",\r",
+						"    month(Hiredate)==2,\"Feb\",\r",
+						"    month(Hiredate)==3,\"Mar\",\r",
+						"    month(Hiredate)==4,\"Apr\",\r",
+						"    month(Hiredate)==5,\"May\",\r",
+						"    month(Hiredate)==6,\"June\",\r",
+						"    month(Hiredate)==7,\"July\",\r",
+						"    month(Hiredate)==8,\"Aug\",\r",
+						"    month(Hiredate)==9,\"Sep\",\r",
+						"    month(Hiredate)==10,\"Oct\",\r",
+						"    month(Hiredate)==11,\"Nov\",\"Dec\"   \r",
+						"        )) ~> derivedColumn1",
+						"derivedColumn1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'delimited',",
+						"     fileSystem: 'datafiles',",
+						"     folderPath: 'output/employee_dateparts',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true,",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": []
+		}
+	]
+}
